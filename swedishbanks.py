@@ -61,6 +61,7 @@ class Nordea(_Bank):
         self.accounts = []
         for x in range(len(account)):
             self.accounts.append((account[x].capitalize(), self._str2num(balance[x]), "SEK"))
+        return self
             
             
 class Swedbank(_Bank):
@@ -84,3 +85,4 @@ class Swedbank(_Bank):
         self.accounts = []
         for account in accounts:
             self.accounts.append((account.group("account").capitalize(), self._str2num(account.group("balance")), "SEK"))
+        return self
