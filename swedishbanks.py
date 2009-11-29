@@ -1,7 +1,7 @@
+import re
+import time
 import urllib
 import urllib2
-import time
-import re
 
 class LoginError(Exception):
     def __init__(self, value):
@@ -42,6 +42,7 @@ class _Bank():
 class Nordea(_Bank):
     def __init__(self, username, password):
         _Bank.__init__(self, username, password)
+        self.update()
 
     def update(self):
         """Update the accounts information."""
@@ -66,19 +67,25 @@ class Nordea(_Bank):
             
 class Swedbank(_Bank):
     def __init__(self, username, password):
-        _Bank.__init__(self, username, password)    
+        _Bank.__init__(self, username, password)
+        self.update()
     
     def update(self):
         """Update the accounts information."""
-        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank/portal.html?service=page1").read()
-        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank/bvi.html?l=-1").read()
-        params = dict(m='post',i='1',l='0',kundnr=self.username, losenord=self.password, _flow_id_='IDENTIFIERINGSMETOD_PIN_WAP_CLIENT', TDEApplName='TDEApplIdentifiering', _new_flow_='false', Auth='false', loggain='Forts%E4tt')
-        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank/bvi.html", params).read()
+        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank-light/login.html").read()
+       #Find the Cross-site request forgery token
+        m = re.search(r'csrf_token"\s*value="(?P<csrftoken>[^"]+)"', data, re.I)
+        if not m:
+            raise ParseError('Unable to find CSRF token.')
+        csrftoken = m.group("csrftoken")
+        params = dict(username=self.username, password=self.password, _csrf_token=csrftoken)
+        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank-light/login.html", params).read()
+         
         if "misslyckats" in data:
             raise LoginError("Wrong username or password.")
-        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank/bvi.html?l=0&i=2").read().replace('\xa0','')
+        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank-light/accounts.html").read().replace('\xa0','')
         
-        accounts = re.finditer(r'<a href="bvi\.html[^>]+>(?P<account>[^:]+):?</a>:? (?P<balance>[0-9.,-]+)<br',data,re.I)
+        accounts = re.finditer(r'<span.*?/span>(?P<account>[^<]+) <.*?secondary">(?P<balance>[0-9 .,-]+)</span', data, re.I)
         if not accounts:
             raise ParseError('Unable to parse data.')
         
