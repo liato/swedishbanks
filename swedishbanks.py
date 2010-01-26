@@ -73,14 +73,14 @@ class Swedbank(_Bank):
     def update(self):
         """Update the accounts information."""
         data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank-light/login.html").read()
-       #Find the Cross-site request forgery token
+        #Find the Cross-site request forgery token
         m = re.search(r'csrf_token"\s*value="(?P<csrftoken>[^"]+)"', data, re.I)
         if not m:
             raise ParseError('Unable to find CSRF token.')
         csrftoken = m.group("csrftoken")
         params = dict(username=self.username, password=self.password, _csrf_token=csrftoken)
-        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank-light/login.html", params).read()
-         
+        data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank/login.html", params).read()
+        
         if "misslyckats" in data:
             raise LoginError("Wrong username or password.")
         data = self._urlopen("https://mobilbank.swedbank.se/banking/swedbank-light/accounts.html").read().replace('\xa0','')
